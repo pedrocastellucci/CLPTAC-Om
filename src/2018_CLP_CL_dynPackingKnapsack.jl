@@ -1,6 +1,9 @@
+push!(LOAD_PATH, pwd())
+
 srand(6)
 
 using Combinatorics
+using Utils
 
 include("2018_CLP_CL_dynPackingBoxSetManipulator.jl")
 
@@ -29,7 +32,25 @@ function getVolumeFromFile(filename)
 end
 
 
+function getBoxesFromShips(allBoxes, shipments)
+
+    boxesLeft = Dict{Int64, Any}()
+    for (bId, dims) in allBoxes
+        if dims[4] in shipments
+            boxesLeft[bId] = dims
+        end
+    end
+
+    boxesLeft
+end
+
+
 function dynSolve(T, alpha, mu, filename, resultFolder)
+
+    filename = joinpath("..", "datasets", filename)
+
+    allBoxes, truck = readTimedThpack(filename)
+    truckDims = truck[1]
 
     instName = basename(filename)
     states = Dict{Int, Float64}()
@@ -54,9 +75,25 @@ function dynSolve(T, alpha, mu, filename, resultFolder)
     M = Dict{Any, Float64}()
     MD = Dict{Any, Int}()
 
+    truckVol = truckDims[1]*truckDims[2]*truckDims[3]
     for i in T, j in 0:2^length(T)-1
+
         if i == T[end]
-            M[j, i] = 1.0/length(T) + mu*states[j]
+            # Last period cost is based on the volume
+            # of boxes left behind:
+            shipsLeft = getBoxSets(j, 10)
+            boxesLeft = getBoxesFromShips(allBoxes, shipsLeft)
+
+            volLeft = 0
+            for (b, dims) in boxesLeft
+                volLeft += dims[1]*dims[2]*dims[3]
+            end
+            volLeft = volLeft/truckVol
+            volLeft = volLeft - (1 - states[j])
+            volLeft = ceil(volLeft)*truckVol
+
+            #M[j, i] = 1.0/length(T) + mu*states[j]
+            M[j, i] = 1.0/length(T) + volLeft
             MD[j, i] = 0
         else
             M[j, i] = Inf
@@ -147,7 +184,7 @@ end
 function runSimulations(filename, mu, alpha, repetitions)
     stopTimes, volumes, objs = [], [], []
 
-    resultFolder = joinpath(homedir(), "Documents", "GitHub", "frankenstein",
+    resultFolder = joinpath("..", "..",
     "results", "2018_CLPTAC_dynProg_AllStates")
 
     T = 1:10
@@ -225,8 +262,17 @@ T = 1:10
 alpha = 0.6
 mu = 4.0
 
-benchFolder = joinpath("..",
-    "datasets")
+benchFolder = joinpath(homedir(),
+    "Dropbox", "research", "crossdock",
+    "benchmarks")
 
-experiments(benchFolder, "../results/make.out", "../results/volume.out")
+# filename = joinpath(homedir(),
+#     "Dropbox", "research", "crossdock",
+#     "benchmarks", "thpack9.1.1")
+
+experiments(benchFolder, "make.out", "volume.out")
 # stopTime, volume, obj = runSimulations(filename, mu, alpha, 5000)
+
+# println(stopTime)
+# println(volume)
+# println(obj)
