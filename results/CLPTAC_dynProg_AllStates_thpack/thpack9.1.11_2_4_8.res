@@ -1,0 +1,18 @@
+
+Vehicle 1. Dimensions (60, 52, 64).
+12 	 24 	 24 	20 	 36	 28	 24	 NA
+69 	 12 	 0 	0 	 40	 20	 32	 NA
+70 	 0 	 20 	0 	 20	 32	 40	 NA
+85 	 20 	 20 	0 	 40	 32	 20	 NA
+97 	 20 	 20 	44 	 40	 32	 20	 NA
+98 	 20 	 0 	32 	 40	 20	 32	 NA
+
+Vehicles used: 1
+
+Mean volume used per vehicle: 0.7622
+
+Node count: 1179
+
+Time to solve: 5.0027s
+
+MIPGap: 0.3087

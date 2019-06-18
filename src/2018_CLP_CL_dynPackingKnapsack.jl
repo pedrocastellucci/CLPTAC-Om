@@ -1,9 +1,11 @@
-push!(LOAD_PATH, pwd())
+    push!(LOAD_PATH, pwd())
 
-srand(6)
-
+using Random
+using Statistics
 using Combinatorics
 using Utils
+
+Random.seed!(6)
 
 include("2018_CLP_CL_dynPackingBoxSetManipulator.jl")
 
@@ -23,7 +25,7 @@ function getVolumeFromFile(filename)
     end
     volume = 0.0
     for line in lines
-        if contains(line, "Mean volume used per vehicle")
+        if occursin("Mean volume used per vehicle", line)
             _, volume = split(line, ":")
             volume = parse(Float64, volume)
         end
@@ -69,7 +71,7 @@ function dynSolve(T, alpha, mu, filename, resultFolder)
             addBoxSet!(bm, c)
         end
         states[bm.boxes] = 1.0 - volume
-        assert(states[bm.boxes] >= 0.0)
+        @assert(states[bm.boxes] >= 0.0)
     end
 
     M = Dict{Any, Float64}()
@@ -141,7 +143,7 @@ function dynSolve(T, alpha, mu, filename, resultFolder)
                 sumProds += prod1*prod2
 
             end
-            assert(abs(sumProds - 1) <= 0.00001)
+            @assert(abs(sumProds - 1) <= 0.00001)
 
             if expectedCost < stopCost
                 M[j, i] = expectedCost
@@ -156,7 +158,7 @@ function dynSolve(T, alpha, mu, filename, resultFolder)
 end
 
 
-function simul(filename, M, MD, mu, alpha)
+function simul(filename, M, MD, mu, alpha, T)
 
     bm = BoxSetManipulator()
     bm.boxes, bm.maxSize = 0, 10
@@ -181,21 +183,18 @@ function simul(filename, M, MD, mu, alpha)
 end
 
 
-function runSimulations(filename, mu, alpha, repetitions)
+function runSimulations(filename, mu, alpha, repetitions, resultsFolder)
     stopTimes, volumes, objs = [], [], []
 
-    resultFolder = joinpath("..", "..",
-    "results", "2018_CLPTAC_dynProg_AllStates")
-
     T = 1:10
-    M, MD, states = dynSolve(T, alpha, mu, filename, resultFolder)
+    M, MD, states = dynSolve(T, alpha, mu, filename, resultsFolder)
     obj = M[0, 1]
 
     for r in 1:repetitions
         if r % 1000 == 0
             println("Doing repetition $r")
         end
-        decisions, shipments, M = simul(filename, M, MD, mu, alpha)
+        decisions, shipments, M = simul(filename, M, MD, mu, alpha, T)
         st = length(decisions)
         vol = states[shipments[end]]
         push!(stopTimes, st)
@@ -206,7 +205,7 @@ function runSimulations(filename, mu, alpha, repetitions)
 end
 
 
-function experiments(benchFolder, makespanFile, volumeFile)
+function experiments(benchFolder, makespanFile, volumeFile, resultsFolder)
 
     repetitions = 5000
     mus = [1, 2, 4]
@@ -224,7 +223,11 @@ function experiments(benchFolder, makespanFile, volumeFile)
         for filename in readdir(benchFolder)
             lineVol = ""
             lineMake = ""
-            if contains(filename, "thpack9.1.")
+
+            # This next line might be different in Windows systems:
+            filename = joinpath(benchFolder, filename)
+
+            if occursin("br", filename)
                 if filename[end] == "~"
                     continue
                 end
@@ -234,7 +237,8 @@ function experiments(benchFolder, makespanFile, volumeFile)
                 lineVol *= "$fileId, "
                 lineMake *= "$fileId, "
                 for alpha in alphas
-                    st, vl, obj = runSimulations(filename, mu, alpha, repetitions)
+                    st, vl, obj = runSimulations(filename, mu, alpha,
+                        repetitions, resultsFolder)
                     lineVol *= "$vl, "
                     lineMake *= "$st, "
                 end
@@ -258,19 +262,15 @@ function experiments(benchFolder, makespanFile, volumeFile)
     end
 end
 
-T = 1:10
-alpha = 0.6
-mu = 4.0
 
-benchFolder = joinpath(homedir(),
-    "Dropbox", "research", "crossdock",
-    "benchmarks")
+benchFolder = joinpath("..", "datasets", "br")
+resultsFolder = joinpath("..", "results", "CLPTAC_dynProg_AllStates_br")
 
-# filename = joinpath(homedir(),
-#     "Dropbox", "research", "crossdock",
-#     "benchmarks", "thpack9.1.1")
+experiments(benchFolder, "make.out", "volume.out", resultsFolder)
 
-experiments(benchFolder, "make.out", "volume.out")
+# T = 1:10
+# alpha = 0.6
+# mu = 4.0
 # stopTime, volume, obj = runSimulations(filename, mu, alpha, 5000)
 
 # println(stopTime)
