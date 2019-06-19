@@ -364,7 +364,7 @@ function main(radix, instId, resultsFolder)
 end
 
 
-for bla in ["3", "4", "5", "6", "7", "8", "9", "10"]
+for bla in ["2"]
     radix = "../datasets/br/br" * bla * "."
     resultsFolder = joinpath("..", "results", "CLPTAC_dynProg_AllStates_br")
 
