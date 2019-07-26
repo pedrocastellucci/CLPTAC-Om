@@ -108,6 +108,10 @@ function dynSolve(T, alpha, mu, filename, resultFolder)
     for i in reverse(T[1:end-1])
         idealBoxesNextPeriod = 1:i+1
 
+        # Here we are generating every possible state
+        # even those with probability zero of happening.
+        # These could be improved to filtered out those states. Even though
+        # it does not affect the results that follow.
         for j in 0:2^length(T)-1
             auxBoxSet.boxes = j
 
