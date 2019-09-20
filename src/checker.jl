@@ -25,7 +25,7 @@ function get_box_position(line)
     values = split(line, " ")
     values = [parse(Int, x)
         for x in values
-            if length((strip(x, [' ', '\t', 'N', 'A']))) > 0
+            if length((strip(x, [' ', '\t']))) > 0
             ]
     values
 end
@@ -117,16 +117,50 @@ function read_outputfile(filename)
             end
         end
     end
-    return (Lx, Ly, Lz), positions
+    return [Lx, Ly, Lz], positions
+end
+
+
+function read_inputfile(filename)
+    lines = nothing
+    open(filename) do fd
+        lines = readlines(fd)
+    end
+
+    container_size = [parse(Int, x) for x in split(lines[1])]
+
+    boxes = Dict{Int, Any}()
+    n_boxes = 1
+    for line in lines[2:end]
+        box = [parse(Int, x) for x in split(line)]
+        boxes[n_boxes] = box[2:end]
+        n_boxes += 1
+    end
+    boxes, container_size
+end
+
+
+function check_time_loaded(boxes, positions)
+    for pos in positions
+        box_id = pos[1]
+        loaded_time = pos[end]
+
+        if loaded_time < boxes[box_id][end]
+            println("Box loaded before time")
+            println(box_id, ": ", boxes[box_id], " loaded at ", loaded_time)
+            exit(0)
+        end
+    end
+    return true
 end
 
 
 function main(inputfile, outputfile)
 
-    container_size, positions = read_outputfile(outputfile)
+    container_size_output, positions = read_outputfile(outputfile)
 
     println("Checking if every box is inside the container...")
-    if check_inside(positions, container_size)
+    if check_inside(positions, container_size_output)
         println("No issue found!")
     end
 
@@ -135,9 +169,23 @@ function main(inputfile, outputfile)
         println("No overlap found!")
     end
 
+    println("Checking the time each box is loaded...")
+    boxes, container_size_input = read_inputfile(inputfile)
+    @assert(container_size_input == container_size_output)
+    if check_time_loaded(boxes, positions)
+        println("No issue found!")
+    end
 
+    println("Checking completed!")
+end
+
+if length(ARGS) != 2
+    println("Wrong usage")
+    println("julia checker [instance-file] [result-file]")
+    exit(0)
 end
 
 inputfile = ARGS[1]
 outputfile = ARGS[2]
+
 main(inputfile, outputfile)
